@@ -477,7 +477,24 @@ impl ModelsManager for StaticModelsManager {
 }
 
 fn load_remote_models_from_file() -> Result<Vec<ModelInfo>, std::io::Error> {
+    if is_openai_builtin_disabled() {
+        return Ok(Vec::new());
+    }
     Ok(crate::bundled_models_response()?.models)
+}
+
+/// Returns true when the built-in OpenAI provider and its bundled catalog
+/// should be suppressed. Mirrors `CODEX_DISABLE_OPENAI_BUILTIN` in
+/// `codex-model-provider-info` so the provider entry and the model catalog
+/// stay in sync.
+fn is_openai_builtin_disabled() -> bool {
+    matches!(
+        std::env::var("CODEX_DISABLE_OPENAI_BUILTIN"),
+        Ok(value) if matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "" | "1" | "true" | "yes" | "on"
+        )
+    )
 }
 
 fn default_model_from_available(available: Vec<ModelPreset>) -> String {
