@@ -1,0 +1,12 @@
+# Local build override (carried on our local branch) — see NOTES.md.
+#
+# Upstream's codex-rs/Cargo.toml sets [profile.release] lto = "thin" /
+# codegen-units = 4, which pulls the whole dependency graph into one rustc
+# during the final link and gets OOM-killed on this 31 GiB box. Config-level
+# profile keys override Cargo.toml, and cargo merges this file (repo root)
+# with codex-rs/.cargo/config.toml (which sets no profile keys), so a plain
+# `cargo build --release` from codex-rs/ now uses the low-memory settings —
+# no --config flags needed.
+[profile.release]
+lto = false
+codegen-units = 256
