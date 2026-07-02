@@ -229,6 +229,29 @@ fn handler_normalizes_only_the_default_namespace() {
 }
 
 #[test]
+fn flat_call_canonicalized_to_default_namespace_resolves_mcp_tool() {
+    let namespace = "mcp__codex_apps__gmail";
+    let tool_name = "gmail_get_recent_emails";
+    let namespaced_name = codex_tools::ToolName::namespaced(namespace, tool_name);
+    let namespaced_handler = Arc::new(TestHandler {
+        tool_name: namespaced_name.clone(),
+    }) as Arc<dyn CoreToolRuntime>;
+    let registry = ToolRegistry::from_tools([Arc::clone(&namespaced_handler)]);
+
+    // OpenAI-compatible providers (e.g. stock vLLM) call back with a flat,
+    // delimiter-joined name, which `build_tool_call` canonicalizes to the
+    // default namespace before dispatch.
+    let flat_joined = format!("{namespace}__{tool_name}");
+    let canonicalized = codex_tools::ToolName::namespaced(DEFAULT_FUNCTION_NAMESPACE, flat_joined);
+
+    assert!(
+        registry
+            .tool(&canonicalized)
+            .is_some_and(|handler| Arc::ptr_eq(&handler, &namespaced_handler))
+    );
+}
+
+#[test]
 fn registry_rejects_default_namespace_alias_collisions() {
     let plain_name = codex_tools::ToolName::plain("lookup");
     let namespaced_name = codex_tools::ToolName::namespaced(DEFAULT_FUNCTION_NAMESPACE, "lookup");
