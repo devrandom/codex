@@ -673,7 +673,46 @@ impl ToolRegistry {
     }
 
     pub(crate) fn registered_tool(&self, name: &ToolName) -> Option<&RegisteredTool> {
-        self.tools.get(&name.clone().with_default_namespace())
+        if let Some(registered) = self.tools.get(&name.clone().with_default_namespace()) {
+            return Some(registered);
+        }
+        if !name.is_default_namespace() {
+            return None;
+        }
+
+        // OpenAI-compatible providers (e.g. stock vLLM) can emit a flat function-call
+        // name without the Responses `namespace` field. Namespaced MCP tools are
+        // registered under their structured key, so reconcile the flat wire name with
+        // the delimiter-joined form advertised to the model.
+        const MCP_TOOL_NAME_DELIMITER: &str = "__";
+        let flat = name.name.as_str();
+        let joined_match = self.tools.iter().find(|(registered, _)| {
+            let Some(namespace) = registered.namespace.as_deref() else {
+                return false;
+            };
+            let joined = format!(
+                "{}{}{}",
+                namespace.trim_end_matches('_'),
+                MCP_TOOL_NAME_DELIMITER,
+                registered.name.trim_start_matches('_')
+            );
+            joined == flat || flat_tool_name(registered) == flat
+        });
+        if let Some((_, registered)) = joined_match {
+            return Some(registered);
+        }
+
+        // Some providers also drop the namespace entirely and call the bare member
+        // name. Accept that only when exactly one namespaced tool matches.
+        let mut bare_matches = self
+            .tools
+            .iter()
+            .filter(|(registered, _)| registered.namespace.is_some() && registered.name == flat)
+            .map(|(_, registered)| registered);
+        match (bare_matches.next(), bare_matches.next()) {
+            (Some(registered), None) => Some(registered),
+            _ => None,
+        }
     }
 
     #[cfg(test)]
