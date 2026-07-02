@@ -34,8 +34,12 @@ cd codex-rs && cargo build --release --bin codex
   execs the release binary.
 - `~/.codex/config.toml` — provider `dev1` (`https://dev1.ycluster.net/v1`,
   `wire_api = "responses"`), model `minimax-m3` (vLLM 0.24, MXFP4 + EAGLE3),
-  `model_context_window = 256000` (matches server `--max-model-len`; silences
-  the "model metadata not found" fallback warning's practical harm).
+  `model_context_window = 256000` (matches server `--max-model-len`).
+- The "model metadata not found / fallback metadata" warning is patched out
+  (carried commit in `turn_context.rs`) when `model_context_window` is set
+  explicitly — custom-provider slugs are never in the catalog, so it nagged
+  every turn. The heavyweight alternative (`model_catalog_json`) requires
+  owning `base_instructions` (the system prompt) per entry; not worth it.
 - Current Codex config scheme: the base `config.toml` IS the default profile;
   top-level `profile = "..."` is rejected as legacy. Named profiles live in
   `<name>.config.toml` selected with `--profile`.
