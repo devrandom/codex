@@ -746,16 +746,16 @@ pub fn built_in_model_providers(
     openai_base_url: Option<String>,
 ) -> HashMap<String, ModelProviderInfo> {
     use ModelProviderInfo as P;
-    let openai_provider = P::create_openai_provider(openai_base_url);
     let amazon_bedrock_provider = P::create_amazon_bedrock_provider(/*aws*/ None);
     let amazon_bedrock_runtime_provider =
         P::create_amazon_bedrock_runtime_provider(/*aws*/ None);
     let gcp_provider = P::create_gcp_provider();
 
-    // Bundle OpenAI, supported cloud-hosted OpenAI backends, and local OSS providers.
+    // Bundle supported cloud-hosted backends and local OSS providers.
     // Other compatible providers can be added through `model_providers` in config.toml.
-    [
-        (OPENAI_PROVIDER_ID, openai_provider),
+    // Set `CODEX_DISABLE_OPENAI_BUILTIN=1` to drop the built-in OpenAI
+    // provider from the defaults; users can still add it back via config.toml.
+    let mut entries: Vec<(&'static str, ModelProviderInfo)> = vec![
         (AMAZON_BEDROCK_PROVIDER_ID, amazon_bedrock_provider),
         (GCP_PROVIDER_ID, gcp_provider),
         (
@@ -770,10 +770,29 @@ pub fn built_in_model_providers(
             LMSTUDIO_OSS_PROVIDER_ID,
             create_oss_provider(DEFAULT_LMSTUDIO_PORT, WireApi::Responses),
         ),
-    ]
-    .into_iter()
-    .map(|(k, v)| (k.to_string(), v))
-    .collect()
+    ];
+
+    if !is_truthy_env("CODEX_DISABLE_OPENAI_BUILTIN") {
+        entries.push((
+            OPENAI_PROVIDER_ID,
+            P::create_openai_provider(openai_base_url),
+        ));
+    }
+
+    entries
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect()
+}
+
+fn is_truthy_env(name: &str) -> bool {
+    matches!(
+        std::env::var(name),
+        Ok(value) if matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "" | "1" | "true" | "yes" | "on"
+        )
+    )
 }
 
 /// Merge configured providers into the built-in provider catalog.
