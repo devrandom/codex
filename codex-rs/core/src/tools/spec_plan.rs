@@ -657,7 +657,47 @@ fn build_model_visible_specs(
         .mcp_namespaces()
         .map(|(_, namespace)| namespace)
         .collect();
-    merge_into_namespaces(specs, &mcp_namespaces)
+    let specs = merge_into_namespaces(specs, &mcp_namespaces);
+    if namespace_tools_enabled(turn_context) {
+        return specs;
+    }
+
+    specs
+        .into_iter()
+        .flat_map(|spec| match spec {
+            // Providers without namespace-tools support (e.g. custom
+            // OpenAI-compatible backends like vLLM) can't use namespace
+            // grouping: the group descriptor gets presented to the model as a
+            // callable and confuses it. Flatten members into plain function
+            // tools with delimiter-joined names — which is also the form the
+            // model calls back with. Note the member tools live INSIDE the
+            // namespace spec, so simply dropping it would drop the tools too.
+            ToolSpec::Namespace(namespace) => {
+                let ns = namespace.name.trim_end_matches('_').to_string();
+                namespace
+                    .tools
+                    .into_iter()
+                    .map(|tool| match tool {
+                        ResponsesApiNamespaceTool::Function(mut function) => {
+                            function.name =
+                                format!("{ns}__{}", function.name.trim_start_matches('_'));
+                            ToolSpec::Function(function)
+                        }
+                        ResponsesApiNamespaceTool::Custom(mut freeform) => {
+                            freeform.name =
+                                format!("{ns}__{}", freeform.name.trim_start_matches('_'));
+                            ToolSpec::Freeform(freeform)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            }
+            spec => vec![spec],
+        })
+        .collect()
+}
+
+fn namespace_tools_enabled(turn_context: &TurnContext) -> bool {
+    turn_context.provider.capabilities().namespace_tools
 }
 
 fn spec_for_model_request(

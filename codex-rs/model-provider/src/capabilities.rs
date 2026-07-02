@@ -12,6 +12,7 @@ use codex_model_provider_info::RemoteCompactionSupport;
 pub struct ProviderCapabilities {
     /// Whether requests may include the Responses API `reasoning.summary` parameter.
     pub reasoning_summaries: bool,
+    pub namespace_tools: bool,
     pub image_generation: bool,
     pub web_search: bool,
     pub external_web_access: bool,
@@ -22,6 +23,7 @@ impl Default for ProviderCapabilities {
     fn default() -> Self {
         Self {
             reasoning_summaries: true,
+            namespace_tools: true,
             image_generation: true,
             web_search: true,
             external_web_access: true,
@@ -32,7 +34,15 @@ impl Default for ProviderCapabilities {
 
 impl ProviderCapabilities {
     pub(crate) fn from_config(info: &ModelProviderInfo) -> Self {
+        // Custom OpenAI-compatible providers (e.g. self-hosted vLLM) do not
+        // implement the hosted Responses tools or the namespace-tools extension.
+        // OpenAI-auth providers keep the default capabilities.
+        let hosted_tools_supported = info.requires_openai_auth;
         let defaults = Self {
+            namespace_tools: hosted_tools_supported,
+            image_generation: hosted_tools_supported,
+            web_search: hosted_tools_supported,
+            external_web_access: hosted_tools_supported,
             remote_compaction: if info.is_openai()
                 || is_azure_responses_provider(&info.name, info.base_url.as_deref())
             {
