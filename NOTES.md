@@ -19,6 +19,15 @@ gateway (2026-07-02). Carried on our local branch (do not push upstream).
 cd codex-rs && cargo build --release --bin codex
 ```
 
+- **GOTCHA (cost an afternoon): the `~/bin/codex` wrapper must point at the SAME
+  profile you rebuild.** It once pointed at `target/debug/codex` while all
+  rebuilds targeted `target/release/codex` — so every change silently ran stale
+  and appeared to have no effect. It now points at `target/release/codex`.
+  Debug is also slow at runtime for an agent. When a code change seems to have
+  no effect, FIRST confirm which binary actually runs: `cat "$(command -v
+  codex)"` and compare its target's mtime to your build. A running interactive
+  session keeps the binary it started with — restart it after a rebuild.
+
 - The low-memory profile lives in `.cargo/config.toml` at the repo root
   (carried commit), so plain `cargo build --release` is safe. Background:
   upstream's `[profile.release] lto = "thin"` pulls the whole dep graph into

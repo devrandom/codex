@@ -248,6 +248,26 @@ impl ModelProvider for ConfiguredModelProvider {
         &self.info
     }
 
+    fn capabilities(&self) -> ProviderCapabilities {
+        // Custom OpenAI-compatible providers (e.g. self-hosted vLLM) do not
+        // implement the hosted Responses tools or the namespace-tools
+        // extension: hosted web_search fails with "unsupported call", and the
+        // namespace group descriptor gets presented to the model as a callable
+        // function, which it then invokes ("unsupported call: mcp__<server>").
+        // Mirror the Amazon Bedrock provider and advertise only what the
+        // backend can actually service. OpenAI-auth providers keep the
+        // defaults.
+        if self.info.requires_openai_auth {
+            ProviderCapabilities::default()
+        } else {
+            ProviderCapabilities {
+                namespace_tools: false,
+                image_generation: false,
+                web_search: false,
+            }
+        }
+    }
+
     fn auth_manager(&self) -> Option<Arc<AuthManager>> {
         self.auth_manager.clone()
     }

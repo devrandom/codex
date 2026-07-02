@@ -398,6 +398,21 @@ impl ToolRegistry {
             {
                 return Some(Arc::clone(tool));
             }
+            // Models behind these providers also sometimes call the bare
+            // member name exactly as advertised (e.g. "kagi_search_fetch",
+            // since the member specs carry bare names and the provider drops
+            // the namespace field). Accept that too, but only when it is
+            // unambiguous across all registered namespaced tools.
+            let mut bare_matches = self
+                .tools
+                .iter()
+                .filter(|(registered, _)| {
+                    registered.namespace.is_some() && registered.name == flat
+                })
+                .map(|(_, tool)| tool);
+            if let (Some(tool), None) = (bare_matches.next(), bare_matches.next()) {
+                return Some(Arc::clone(tool));
+            }
         }
         None
     }

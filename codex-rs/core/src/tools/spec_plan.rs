@@ -262,10 +262,32 @@ fn build_model_visible_specs_and_registry(
     specs.extend(hosted_specs);
 
     let registry = ToolRegistry::from_tools(runtimes);
+    let namespaces_enabled = namespace_tools_enabled(turn_context);
     let model_visible_specs = merge_into_namespaces(specs)
         .into_iter()
-        .filter(|spec| {
-            namespace_tools_enabled(turn_context) || !matches!(spec, ToolSpec::Namespace(_))
+        .flat_map(|spec| match spec {
+            // Providers without namespace-tools support (e.g. custom
+            // OpenAI-compatible backends like vLLM) can't use namespace
+            // grouping: the group descriptor gets presented to the model as a
+            // callable and confuses it. Flatten members into plain function
+            // tools with delimiter-joined names — which is also the form the
+            // model calls back with. Note the member tools live INSIDE the
+            // namespace spec, so simply dropping it would drop the tools too.
+            ToolSpec::Namespace(namespace) if !namespaces_enabled => {
+                let ns = namespace.name.trim_end_matches('_').to_string();
+                namespace
+                    .tools
+                    .into_iter()
+                    .map(|tool| match tool {
+                        ResponsesApiNamespaceTool::Function(mut function) => {
+                            function.name =
+                                format!("{ns}__{}", function.name.trim_start_matches('_'));
+                            ToolSpec::Function(function)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            }
+            spec => vec![spec],
         })
         .collect();
 
