@@ -305,22 +305,26 @@ impl ModelProvider for ConfiguredModelProvider {
             RemoteCompactionSupport::Unsupported
         };
 
-        ProviderCapabilities {
-            remote_compaction,
-            ..ProviderCapabilities::default()
-        }
-    }
-
-    fn approval_review_preferred_model(&self) -> &'static str {
-        if self
-            .auth_manager
-            .as_ref()
-            .and_then(|auth_manager| auth_manager.auth_cached())
-            .is_some_and(|auth| auth.is_api_key_auth())
-        {
-            API_KEY_APPROVAL_REVIEW_PREFERRED_MODEL
+        // Custom OpenAI-compatible providers (e.g. self-hosted vLLM) do not
+        // implement the hosted Responses tools or the namespace-tools
+        // extension: hosted web_search fails with "unsupported call", and the
+        // namespace group descriptor gets presented to the model as a callable
+        // function, which it then invokes ("unsupported call: mcp__<server>").
+        // Mirror the Amazon Bedrock provider and advertise only what the
+        // backend can actually service. OpenAI-auth providers keep the
+        // defaults.
+        if self.info.requires_openai_auth {
+            ProviderCapabilities {
+                remote_compaction,
+                ..ProviderCapabilities::default()
+            }
         } else {
-            DEFAULT_APPROVAL_REVIEW_PREFERRED_MODEL
+            ProviderCapabilities {
+                namespace_tools: false,
+                image_generation: false,
+                web_search: false,
+                remote_compaction,
+            }
         }
     }
 
