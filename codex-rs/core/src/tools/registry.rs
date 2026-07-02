@@ -357,7 +357,49 @@ impl ToolRegistry {
     }
 
     fn tool(&self, name: &ToolName) -> Option<Arc<dyn CoreToolRuntime>> {
-        self.tools.get(name).map(Arc::clone)
+        if let Some(tool) = self.tools.get(name) {
+            return Some(Arc::clone(tool));
+        }
+        // Fallback for OpenAI-compatible providers (e.g. stock vLLM) that emit a
+        // flat function-call name without the Responses `namespace` field. Tools
+        // are advertised as a namespace group (e.g. "mcp__kagi") with bare member
+        // names ("kagi_search_fetch"); models behind such providers call back
+        // with the delimiter-joined form ("mcp__kagi__kagi_search_fetch") and
+        // `namespace: None`, which does not hash-match the structured namespaced
+        // key the tool is registered under. Reconcile by re-deriving the joined
+        // wire name from each registered key (mirroring `join_tool_name` in
+        // handlers/mcp.rs), and also accept raw concatenation for namespaces
+        // that carry their own trailing delimiter. Only runs on the miss path,
+        // so providers that do send `namespace` are unaffected. Flattened-name
+        // collisions are prevented upstream by the catalog's hash-suffixing of
+        // colliding namespaces.
+        if name.namespace.is_none() {
+            const MCP_TOOL_NAME_DELIMITER: &str = "__";
+            let flat = name.name.as_str();
+            let matches_flat = |registered: &ToolName| -> bool {
+                // Namespace-less keys with this exact name already matched the
+                // primary HashMap lookup above.
+                let Some(namespace) = registered.namespace.as_deref() else {
+                    return false;
+                };
+                let joined = format!(
+                    "{}{}{}",
+                    namespace.trim_end_matches('_'),
+                    MCP_TOOL_NAME_DELIMITER,
+                    registered.name.trim_start_matches('_')
+                );
+                joined == flat || flat_tool_name(registered) == flat
+            };
+            if let Some(tool) = self
+                .tools
+                .iter()
+                .find(|(registered, _)| matches_flat(registered))
+                .map(|(_, tool)| tool)
+            {
+                return Some(Arc::clone(tool));
+            }
+        }
+        None
     }
 
     #[cfg(test)]
