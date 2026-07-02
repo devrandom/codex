@@ -780,7 +780,11 @@ impl Session {
     }
 
     pub(crate) async fn maybe_emit_model_warnings_for_turn(&self, tc: &TurnContext) {
-        if tc.model_info.used_fallback_model_metadata {
+        // Skip the fallback-metadata warning when the user explicitly configured
+        // the context window: the metadata that matters has been supplied, and
+        // for custom providers (self-hosted models) the slug will never be in
+        // the catalog, so the warning is pure noise on every turn.
+        if tc.model_info.used_fallback_model_metadata && tc.config.model_context_window.is_none() {
             self.send_event(
                 tc,
                 EventMsg::Warning(WarningEvent {
