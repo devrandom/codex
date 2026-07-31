@@ -1033,6 +1033,11 @@ pub struct Config {
     /// Whether to register the update_plan tool.
     pub update_plan_enabled: bool,
 
+    /// Whether to register the apply_patch tool. When `false`, the
+    /// `apply_patch` freeform tool is not offered to the model even if the
+    /// underlying model metadata would otherwise enable it.
+    pub apply_patch_enabled: bool,
+
     /// Configuration for the experimental code-mode tool surface.
     pub code_mode: CodeModeConfig,
 
@@ -2556,6 +2561,14 @@ fn resolve_update_plan_enabled(config_toml: &ConfigToml) -> bool {
         .is_none_or(|config| config.enabled)
 }
 
+fn resolve_apply_patch_enabled(config_toml: &ConfigToml) -> bool {
+    config_toml
+        .tools
+        .as_ref()
+        .and_then(|tools| tools.apply_patch.as_ref())
+        .is_none_or(|config| config.enabled)
+}
+
 fn resolve_orchestrator_feature_enabled(
     feature: Option<&codex_config::config_toml::OrchestratorFeatureToml>,
 ) -> bool {
@@ -3608,6 +3621,7 @@ impl Config {
         let experimental_request_user_input_enabled =
             resolve_experimental_request_user_input_enabled(&cfg);
         let update_plan_enabled = resolve_update_plan_enabled(&cfg);
+        let apply_patch_enabled = resolve_apply_patch_enabled(&cfg);
         let code_mode = resolve_code_mode_config(&cfg);
         let multi_agent_v2 = resolve_multi_agent_v2_config(&cfg);
         let token_budget = resolve_token_budget_config(&cfg, &features)?;
@@ -4140,6 +4154,7 @@ impl Config {
             web_search_config,
             experimental_request_user_input_enabled,
             update_plan_enabled,
+            apply_patch_enabled,
             code_mode,
             use_experimental_unified_exec_tool,
             background_terminal_max_timeout,
