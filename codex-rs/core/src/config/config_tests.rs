@@ -397,6 +397,7 @@ web_search = true
             web_search: None,
             experimental_request_user_input: None,
             update_plan: None,
+            apply_patch: None,
         })
     );
 }
@@ -417,6 +418,7 @@ web_search = false
             web_search: None,
             experimental_request_user_input: None,
             update_plan: None,
+            apply_patch: None,
         })
     );
 }
@@ -436,6 +438,7 @@ fn tools_experimental_request_user_input_defaults_to_enabled() {
             web_search: None,
             experimental_request_user_input: Some(ExperimentalRequestUserInput { enabled: true }),
             update_plan: None,
+            apply_patch: None,
         })
     );
 }
@@ -456,6 +459,7 @@ enabled = false
             web_search: None,
             experimental_request_user_input: Some(ExperimentalRequestUserInput { enabled: false }),
             update_plan: None,
+            apply_patch: None,
         })
     );
 }
@@ -471,6 +475,7 @@ async fn load_config_resolves_experimental_request_user_input_enabled() -> std::
                     enabled: false,
                 }),
                 update_plan: None,
+                apply_patch: None,
             }),
             ..ConfigToml::default()
         },
@@ -561,6 +566,27 @@ enabled = false
     .await?;
 
     assert!(!config.update_plan_enabled);
+    Ok(())
+}
+
+#[tokio::test]
+async fn load_config_resolves_apply_patch_enabled() -> std::io::Result<()> {
+    let codex_home = tempdir()?;
+    let config_toml = toml::from_str(
+        r#"
+[tools.apply_patch]
+enabled = false
+"#,
+    )
+    .expect("TOML deserialization should succeed");
+    let config = Config::load_from_base_config_with_overrides(
+        config_toml,
+        ConfigOverrides::default(),
+        codex_home.abs(),
+    )
+    .await?;
+
+    assert!(!config.apply_patch_enabled);
     Ok(())
 }
 

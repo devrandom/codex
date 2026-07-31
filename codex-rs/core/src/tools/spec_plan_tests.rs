@@ -822,6 +822,28 @@ async fn update_plan_tool_respects_config_gate() {
 }
 
 #[tokio::test]
+async fn apply_patch_tool_respects_config_gate() {
+    let enabled = probe(|turn| {
+        Arc::make_mut(&mut turn.model_info).apply_patch_tool_type =
+            Some(ApplyPatchToolType::Freeform);
+    })
+    .await;
+    enabled.assert_visible_contains(&["apply_patch"]);
+    enabled.assert_registered_contains(&["apply_patch"]);
+
+    let disabled = probe(|turn| {
+        Arc::make_mut(&mut turn.model_info).apply_patch_tool_type =
+            Some(ApplyPatchToolType::Freeform);
+        update_config(turn, |config| {
+            config.apply_patch_enabled = false;
+        });
+    })
+    .await;
+    disabled.assert_visible_lacks(&["apply_patch"]);
+    disabled.assert_registered_lacks(&["apply_patch"]);
+}
+
+#[tokio::test]
 async fn request_user_input_stays_direct_in_code_mode_only() {
     let plan = probe(|turn| {
         set_features(turn, &[Feature::CodeMode, Feature::CodeModeOnly]);

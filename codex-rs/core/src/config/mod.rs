@@ -1018,6 +1018,11 @@ pub struct Config {
     /// Policy for collecting and validating tool runtimes.
     pub tool_registry: ToolRegistryConfig,
 
+    /// Whether to register the apply_patch tool. When `false`, the
+    /// `apply_patch` freeform tool is not offered to the model even if the
+    /// underlying model metadata would otherwise enable it.
+    pub apply_patch_enabled: bool,
+
     /// Configuration for the experimental code-mode tool surface.
     pub code_mode: CodeModeConfig,
 
@@ -2620,6 +2625,14 @@ fn resolve_update_plan_enabled(config_toml: &ConfigToml) -> bool {
         .is_none_or(|config| config.enabled)
 }
 
+fn resolve_apply_patch_enabled(config_toml: &ConfigToml) -> bool {
+    config_toml
+        .tools
+        .as_ref()
+        .and_then(|tools| tools.apply_patch.as_ref())
+        .is_none_or(|config| config.enabled)
+}
+
 fn resolve_orchestrator_feature_enabled(
     feature: Option<&codex_config::config_toml::OrchestratorFeatureToml>,
 ) -> bool {
@@ -3658,6 +3671,7 @@ impl Config {
                 .and_then(|config| config.turn_metadata_includes_tool_info)
                 .unwrap_or_default(),
         };
+        let apply_patch_enabled = resolve_apply_patch_enabled(&cfg);
         let code_mode = resolve_code_mode_config(&cfg);
         let multi_agent_v2 = resolve_multi_agent_v2_config(&cfg);
         let token_budget = resolve_token_budget_config(&cfg, &features)?;
@@ -4250,6 +4264,7 @@ impl Config {
             experimental_request_user_input_enabled,
             update_plan_enabled,
             tool_registry,
+            apply_patch_enabled,
             code_mode,
             background_terminal_max_timeout,
             ghost_snapshot,
