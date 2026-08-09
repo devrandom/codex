@@ -95,6 +95,7 @@ impl PreparedExecCommand {
                     },
                     prefix_rule: self.prefix_rule.clone(),
                     allow_prefix_rules: step.turn.allow_prefix_rules(),
+                    deny_dangerous_commands: step.turn.config.deny_dangerous_commands,
                 },
                 configured_shell,
                 command_platform,

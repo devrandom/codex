@@ -260,6 +260,7 @@ async fn new_config(
             Constrained::allow_any(AskForApproval::Never),
             Constrained::allow_any(PermissionProfile::read_only()),
         )?,
+        deny_dangerous_commands: false,
         explicit_permission_profile_mode: false,
         custom_permission_profiles: Vec::new(),
         approvals_reviewer: ApprovalsReviewer::User,
