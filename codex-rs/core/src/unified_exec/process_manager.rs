@@ -1187,6 +1187,7 @@ impl UnifiedExecProcessManager {
                     request.sandbox_permissions
                 },
                 prefix_rule: request.prefix_rule.clone(),
+                deny_dangerous_commands: context.turn.config.deny_dangerous_commands,
             })
             .await;
         let req = UnifiedExecToolRequest {

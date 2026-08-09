@@ -639,6 +639,7 @@ fn evaluate_intercepted_exec_policy_uses_wrapper_command_when_shell_wrapper_pars
             windows_sandbox_level: WindowsSandboxLevel::Disabled,
             sandbox_permissions: SandboxPermissions::UseDefault,
             enable_shell_wrapper_parsing: enable_intercepted_exec_policy_shell_wrapper_parsing,
+            deny_dangerous_commands: false,
         },
     );
 
@@ -690,6 +691,7 @@ fn evaluate_intercepted_exec_policy_matches_inner_shell_commands_when_enabled() 
             windows_sandbox_level: WindowsSandboxLevel::Disabled,
             sandbox_permissions: SandboxPermissions::UseDefault,
             enable_shell_wrapper_parsing: enable_intercepted_exec_policy_shell_wrapper_parsing,
+            deny_dangerous_commands: false,
         },
     );
 
@@ -732,6 +734,7 @@ host_executable(name = "git", paths = ["{git_path_literal}"])
             windows_sandbox_level: WindowsSandboxLevel::Disabled,
             sandbox_permissions: SandboxPermissions::UseDefault,
             enable_shell_wrapper_parsing: false,
+            deny_dangerous_commands: false,
         },
     );
 
@@ -870,6 +873,7 @@ fn intercepted_exec_policy_treats_preapproved_additional_permissions_as_default(
                 /*additional_permissions_preapproved*/ true,
             ),
             enable_shell_wrapper_parsing: false,
+            deny_dangerous_commands: false,
         },
     );
     let fresh_request = evaluate_intercepted_exec_policy(
@@ -882,6 +886,7 @@ fn intercepted_exec_policy_treats_preapproved_additional_permissions_as_default(
             windows_sandbox_level: WindowsSandboxLevel::Disabled,
             sandbox_permissions: SandboxPermissions::WithAdditionalPermissions,
             enable_shell_wrapper_parsing: false,
+            deny_dangerous_commands: false,
         },
     );
 
@@ -915,6 +920,7 @@ host_executable(name = "git", paths = ["{allowed_git_literal}"])
             windows_sandbox_level: WindowsSandboxLevel::Disabled,
             sandbox_permissions: SandboxPermissions::UseDefault,
             enable_shell_wrapper_parsing: false,
+            deny_dangerous_commands: false,
         },
     );
 

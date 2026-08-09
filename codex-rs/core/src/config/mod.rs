@@ -650,6 +650,10 @@ pub struct Config {
     /// Effective permission configuration for shell tool execution.
     pub permissions: Permissions,
 
+    /// When `true`, commands flagged by the dangerous-command heuristics are
+    /// denied outright instead of prompting for approval.
+    pub deny_dangerous_commands: bool,
+
     /// Whether config explicitly selected named permissions profiles instead
     /// of the legacy `sandbox_mode` syntax.
     pub explicit_permission_profile_mode: bool,
@@ -4018,6 +4022,7 @@ impl Config {
                 windows_sandbox_mode,
                 windows_sandbox_private_desktop,
             },
+            deny_dangerous_commands: cfg.deny_dangerous_commands.unwrap_or(false),
             explicit_permission_profile_mode,
             custom_permission_profiles,
             approvals_reviewer: constrained_approvals_reviewer.value(),
