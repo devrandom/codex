@@ -169,6 +169,12 @@ pub struct ConfigToml {
     /// Default approval policy for executing commands.
     pub approval_policy: Option<AskForApproval>,
 
+    /// When `true`, commands flagged by the dangerous-command heuristics are
+    /// denied outright instead of prompting for approval. This affects only
+    /// unmatched-command heuristic auto-escalations; explicit execpolicy rules
+    /// are unaffected.
+    pub deny_dangerous_commands: Option<bool>,
+
     /// Configures who approval requests are routed to for review once they have
     /// been escalated. This does not disable separate safety checks such as
     /// ARC.
