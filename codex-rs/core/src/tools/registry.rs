@@ -467,7 +467,7 @@ impl ToolRegistry {
                 })
                 .map(|(_, tool)| tool);
             if let (Some(tool), None) = (bare_matches.next(), bare_matches.next()) {
-                return Some(Arc::clone(tool));
+                return Some(Arc::clone(&tool.runtime));
             }
         }
         None

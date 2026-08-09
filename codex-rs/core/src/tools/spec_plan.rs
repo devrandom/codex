@@ -447,7 +447,7 @@ fn build_model_visible_specs(
     specs.extend(hosted_specs);
 
     let namespaces_enabled = namespace_tools_enabled(turn_context);
-    let model_visible_specs = merge_into_namespaces(specs)
+    merge_into_namespaces(specs)
         .into_iter()
         .flat_map(|spec| match spec {
             // Providers without namespace-tools support (e.g. custom
@@ -467,6 +467,11 @@ fn build_model_visible_specs(
                             function.name =
                                 format!("{ns}__{}", function.name.trim_start_matches('_'));
                             ToolSpec::Function(function)
+                        }
+                        ResponsesApiNamespaceTool::Custom(mut freeform) => {
+                            freeform.name =
+                                format!("{ns}__{}", freeform.name.trim_start_matches('_'));
+                            ToolSpec::Freeform(freeform)
                         }
                     })
                     .collect::<Vec<_>>()
