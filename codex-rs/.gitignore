@@ -6,3 +6,9 @@
 
 # Value of CARGO_TARGET_DIR when using .devcontainer/devcontainer.json.
 /target-arm64/
+
+# Cached prebuilt V8 static library archives downloaded once from
+# denoland/rusty_v8 releases and referenced via RUSTY_V8_ARCHIVE /
+# RUSTY_V8_SRC_BINDING_PATH in .envrc. Regenerate with the curl in
+# vendor/v8-archive/README.md if a new release is needed.
+/vendor/v8-archive/

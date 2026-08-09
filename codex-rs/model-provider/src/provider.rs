@@ -323,6 +323,7 @@ impl ModelProvider for ConfiguredModelProvider {
                 namespace_tools: false,
                 image_generation: false,
                 web_search: false,
+                external_web_access: false,
                 remote_compaction,
             }
         }
