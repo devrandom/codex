@@ -426,6 +426,11 @@ impl CoreShellActionProvider {
                     sandbox_permissions: self.approval_sandbox_permissions,
                     enable_shell_wrapper_parsing:
                         ENABLE_INTERCEPTED_EXEC_POLICY_SHELL_WRAPPER_PARSING,
+                    deny_dangerous_commands: self
+                        .review_context
+                        .turn()
+                        .config
+                        .deny_dangerous_commands,
                 },
             )
         };
@@ -494,6 +499,7 @@ fn evaluate_intercepted_exec_policy(
         windows_sandbox_level,
         sandbox_permissions,
         enable_shell_wrapper_parsing,
+        deny_dangerous_commands,
     } = context;
     let commands = if enable_shell_wrapper_parsing {
         // In this codepath, the first argument in `commands` could be a bare
@@ -515,6 +521,7 @@ fn evaluate_intercepted_exec_policy(
                 windows_sandbox_level,
                 sandbox_permissions,
                 command_origin: crate::exec_policy::ExecPolicyCommandOrigin::Generic,
+                deny_dangerous_commands,
             },
         )
     };
@@ -537,6 +544,7 @@ struct InterceptedExecPolicyContext {
     windows_sandbox_level: WindowsSandboxLevel,
     sandbox_permissions: SandboxPermissions,
     enable_shell_wrapper_parsing: bool,
+    deny_dangerous_commands: bool,
 }
 
 fn commands_for_intercepted_exec_policy(

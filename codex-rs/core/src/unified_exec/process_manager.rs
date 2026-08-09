@@ -1277,6 +1277,7 @@ impl UnifiedExecProcessManager {
                     },
                     prefix_rule: request.prefix_rule.clone(),
                     allow_prefix_rules: context.step_context.turn.allow_prefix_rules(),
+                    deny_dangerous_commands: turn.config.deny_dangerous_commands,
                 },
                 configured_shell,
                 &request.shell_mode,

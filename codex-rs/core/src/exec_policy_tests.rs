@@ -1179,6 +1179,7 @@ fn unmatched_granular_policy_still_prompts_for_restricted_sandbox_escalation() {
                 windows_sandbox_level: WindowsSandboxLevel::Disabled,
                 sandbox_permissions: SandboxPermissions::RequireEscalated,
                 command_origin: ExecPolicyCommandOrigin::Generic,
+                deny_dangerous_commands: false,
             },
         )
     );
@@ -1198,6 +1199,7 @@ fn unmatched_on_request_uses_permission_profile_file_system_policy_for_escalatio
                 windows_sandbox_level: WindowsSandboxLevel::Disabled,
                 sandbox_permissions: SandboxPermissions::RequireEscalated,
                 command_origin: ExecPolicyCommandOrigin::Generic,
+                deny_dangerous_commands: false,
             },
         )
     );
@@ -1217,6 +1219,7 @@ fn known_safe_on_request_still_prompts_for_restricted_sandbox_escalation() {
                 windows_sandbox_level: WindowsSandboxLevel::RestrictedToken,
                 sandbox_permissions: SandboxPermissions::RequireEscalated,
                 command_origin: ExecPolicyCommandOrigin::Generic,
+                deny_dangerous_commands: false,
             },
         )
     );
@@ -1451,6 +1454,7 @@ async fn mixed_rule_and_sandbox_prompt_prioritizes_rule_for_rejection_decision()
             sandbox_permissions: SandboxPermissions::RequireEscalated,
             prefix_rule: None,
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1490,6 +1494,7 @@ async fn forced_rm_preserves_rule_rejection_when_granular_rules_are_disabled() {
             sandbox_permissions: SandboxPermissions::RequireEscalated,
             prefix_rule: None,
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1516,6 +1521,7 @@ async fn exec_approval_requirement_falls_back_to_heuristics() {
             sandbox_permissions: SandboxPermissions::UseDefault,
             prefix_rule: None,
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1543,6 +1549,7 @@ async fn empty_bash_lc_script_falls_back_to_original_command() {
             sandbox_permissions: SandboxPermissions::UseDefault,
             prefix_rule: None,
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1574,6 +1581,7 @@ async fn whitespace_bash_lc_script_falls_back_to_original_command() {
             sandbox_permissions: SandboxPermissions::UseDefault,
             prefix_rule: None,
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1605,6 +1613,7 @@ async fn request_rule_uses_prefix_rule() {
             sandbox_permissions: SandboxPermissions::RequireEscalated,
             prefix_rule: Some(vec!["cargo".to_string(), "install".to_string()]),
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1639,6 +1648,7 @@ async fn request_rule_falls_back_when_prefix_rule_does_not_approve_all_commands(
             sandbox_permissions: SandboxPermissions::RequireEscalated,
             prefix_rule: Some(vec!["cargo".to_string(), "install".to_string()]),
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await;
 
@@ -1680,6 +1690,7 @@ async fn heuristics_apply_when_other_commands_match_policy() {
                 sandbox_permissions: SandboxPermissions::UseDefault,
                 prefix_rule: None,
                 allow_prefix_rules: AllowPrefixRules::Honor,
+                deny_dangerous_commands: false,
             })
             .await,
         ExecApprovalRequirement::NeedsApproval {
@@ -2160,6 +2171,7 @@ async fn forced_rm_requires_approval_or_specific_rejection_on_all_platforms() {
                 sandbox_permissions: permissions,
                 prefix_rule: None,
                 allow_prefix_rules: AllowPrefixRules::Honor,
+                deny_dangerous_commands: false,
             })
             .await,
         r#"On all platforms, a forbidden command should require approval
@@ -2183,10 +2195,61 @@ async fn forced_rm_requires_approval_or_specific_rejection_on_all_platforms() {
                 sandbox_permissions: permissions,
                 prefix_rule: None,
                 allow_prefix_rules: AllowPrefixRules::Honor,
+                deny_dangerous_commands: false,
             })
             .await,
         r#"On all platforms, a forbidden command should require approval
             (unless AskForApproval::Never is specified)."#
+    );
+}
+
+#[tokio::test]
+async fn deny_dangerous_commands_forbids_dangerous_command_on_request() {
+    let policy = ExecPolicyManager::new(Arc::new(Policy::empty()));
+    let dangerous_command = vec_str(&["rm", "-rf", "/important/data"]);
+
+    // With the flag disabled, a dangerous unmatched command still prompts.
+    assert_eq!(
+        ExecApprovalRequirement::NeedsApproval {
+            reason: None,
+            proposed_execpolicy_amendment: Some(ExecPolicyAmendment::new(
+                dangerous_command.clone()
+            )),
+        },
+        policy
+            .create_exec_approval_requirement_for_command(ExecApprovalRequest {
+                command: &dangerous_command,
+                approval_policy: AskForApproval::OnRequest,
+                permission_profile: PermissionProfile::read_only(),
+                environment_policy: None,
+                windows_sandbox_level: WindowsSandboxLevel::Disabled,
+                sandbox_permissions: SandboxPermissions::UseDefault,
+                prefix_rule: None,
+                allow_prefix_rules: AllowPrefixRules::Honor,
+                deny_dangerous_commands: false,
+            })
+            .await,
+    );
+
+    // With the flag enabled, the same command is denied outright.
+    assert_eq!(
+        ExecApprovalRequirement::Forbidden {
+            reason: "`rm -rf /important/data` rejected: rm -f style commands are not permitted. Use a safer approach"
+                .to_string(),
+        },
+        policy
+            .create_exec_approval_requirement_for_command(ExecApprovalRequest {
+                command: &dangerous_command,
+                approval_policy: AskForApproval::OnRequest,
+                permission_profile: PermissionProfile::read_only(),
+                environment_policy: None,
+                windows_sandbox_level: WindowsSandboxLevel::Disabled,
+                sandbox_permissions: SandboxPermissions::UseDefault,
+                prefix_rule: None,
+                allow_prefix_rules: AllowPrefixRules::Honor,
+                deny_dangerous_commands: true,
+            })
+            .await,
     );
 }
 
@@ -2243,6 +2306,7 @@ async fn verify_approval_requirement_for_unsafe_powershell_command() {
                 sandbox_permissions: permissions,
                 prefix_rule: None,
                 allow_prefix_rules: AllowPrefixRules::Honor,
+                deny_dangerous_commands: false,
             })
             .await,
         "{pwsh_approval_reason}"
@@ -2337,6 +2401,7 @@ async fn exec_approval_requirement_for_command(
             sandbox_permissions,
             prefix_rule,
             allow_prefix_rules: AllowPrefixRules::Honor,
+            deny_dangerous_commands: false,
         })
         .await
 }

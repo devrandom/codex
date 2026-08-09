@@ -172,6 +172,7 @@ pub(crate) struct UnmatchedCommandContext<'a> {
     pub(crate) windows_sandbox_level: WindowsSandboxLevel,
     pub(crate) sandbox_permissions: SandboxPermissions,
     pub(crate) command_origin: ExecPolicyCommandOrigin,
+    pub(crate) deny_dangerous_commands: bool,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -289,6 +290,7 @@ pub(crate) struct ExecApprovalRequest<'a> {
     pub(crate) sandbox_permissions: SandboxPermissions,
     pub(crate) prefix_rule: Option<Vec<String>>,
     pub(crate) allow_prefix_rules: AllowPrefixRules,
+    pub(crate) deny_dangerous_commands: bool,
 }
 
 impl ExecPolicyManager {
@@ -338,6 +340,7 @@ impl ExecPolicyManager {
             sandbox_permissions,
             prefix_rule,
             allow_prefix_rules,
+            deny_dangerous_commands,
         } = req;
         let exec_policy = self.current_for_environment(environment_policy, allow_prefix_rules);
         // Avoid reusable approvals when this model does not honor prefix rules.
@@ -351,6 +354,7 @@ impl ExecPolicyManager {
                     windows_sandbox_level,
                     sandbox_permissions,
                     command_origin,
+                    deny_dangerous_commands,
                 },
             )
         };
@@ -743,7 +747,8 @@ pub(crate) fn render_decision_for_unmatched_command(
         permission_profile,
         windows_sandbox_level,
         sandbox_permissions,
-        command_origin: _,
+        deny_dangerous_commands,
+        ..
     } = context;
     let file_system_sandbox_policy = permission_profile.file_system_sandbox_policy();
     // When the Windows sandbox backend is disabled, managed filesystem
@@ -759,9 +764,21 @@ pub(crate) fn render_decision_for_unmatched_command(
     //
     // We prefer to prompt the user rather than outright forbid the command,
     // but if the user has explicitly disabled prompts, we must
-    // forbid the command.
-    if dangerous_command_match.is_some() || windows_managed_fs_restrictions_without_sandbox_backend
-    {
+    // forbid the command. When `deny_dangerous_commands` is enabled, commands
+    // flagged by the dangerous-command heuristics are always forbidden rather
+    // than escalated for approval.
+    if dangerous_command_match.is_some() {
+        if deny_dangerous_commands {
+            return Decision::Forbidden;
+        }
+        return match approval_policy {
+            AskForApproval::Never => Decision::Forbidden,
+            AskForApproval::OnRequest
+            | AskForApproval::UnlessTrusted
+            | AskForApproval::Granular(_) => Decision::Prompt,
+        };
+    }
+    if windows_managed_fs_restrictions_without_sandbox_backend {
         return match approval_policy {
             AskForApproval::Never => Decision::Forbidden,
             AskForApproval::OnRequest

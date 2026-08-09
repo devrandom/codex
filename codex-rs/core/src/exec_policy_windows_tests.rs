@@ -62,6 +62,7 @@ fn commands_for_exec_policy_parses_powershell_shell_wrapper() {
         ExecPolicyCommands {
             commands: vec![vec!["echo".to_string(), "blocked".to_string()]],
             command_origin: ExecPolicyCommandOrigin::PowerShell,
+            deny_dangerous_commands: false,
         }
     );
 }
@@ -80,6 +81,7 @@ fn unmatched_powershell_read_requires_approval_without_sandbox() {
                 windows_sandbox_level: WindowsSandboxLevel::Disabled,
                 sandbox_permissions: SandboxPermissions::UseDefault,
                 command_origin: ExecPolicyCommandOrigin::PowerShell,
+                deny_dangerous_commands: false,
             },
         )
     );
@@ -103,6 +105,7 @@ fn read_only_windows_sandbox_runs_unmatched_commands_under_sandbox() {
                     windows_sandbox_level,
                     sandbox_permissions: SandboxPermissions::UseDefault,
                     command_origin: ExecPolicyCommandOrigin::Generic,
+                    deny_dangerous_commands: false,
                 },
             )
         );
@@ -123,6 +126,7 @@ fn read_only_windows_policy_without_sandbox_backend_still_requires_approval() {
                 windows_sandbox_level: WindowsSandboxLevel::Disabled,
                 sandbox_permissions: SandboxPermissions::UseDefault,
                 command_origin: ExecPolicyCommandOrigin::Generic,
+                deny_dangerous_commands: false,
             },
         ),
         "command is forbidden because approval policy is never and there is no Windows sandbox to rely on"
@@ -163,6 +167,7 @@ fn writable_windows_policy_without_sandbox_backend_still_requires_approval() {
                 windows_sandbox_level: WindowsSandboxLevel::Disabled,
                 sandbox_permissions: SandboxPermissions::UseDefault,
                 command_origin: ExecPolicyCommandOrigin::Generic,
+                deny_dangerous_commands: false,
             },
         )
     );
