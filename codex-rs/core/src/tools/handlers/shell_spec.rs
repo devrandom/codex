@@ -154,6 +154,23 @@ pub fn create_write_stdin_tool() -> ToolSpec {
     })
 }
 
+pub fn create_list_background_terminals_tool() -> ToolSpec {
+    ToolSpec::Function(ResponsesApiTool {
+        name: "list_background_terminals".to_string(),
+        description:
+            "List all currently running background terminal sessions started by exec_command, one per line as `<session_id>: <command>`. Pass a returned `<session_id>` to `write_stdin` to poll for output or send input to that session. Returns no lines when no background sessions are running."
+                .to_string(),
+        strict: false,
+        defer_loading: None,
+        parameters: JsonSchema::object(
+            BTreeMap::new(),
+            /*required*/ None,
+            /*additional_properties*/ Some(false.into()),
+        ),
+        output_schema: None,
+    })
+}
+
 pub fn create_request_permissions_tool(description: String) -> ToolSpec {
     let properties = BTreeMap::from([
         (

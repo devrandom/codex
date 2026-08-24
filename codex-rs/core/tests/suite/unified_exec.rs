@@ -1025,6 +1025,96 @@ async fn unified_exec_emits_output_delta_for_exec_command() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn list_background_terminals_lists_running_sessions() -> Result<()> {
+    // TODO(anp): Remove after unified-exec fixtures use target-native commands.
+    skip_if_target_windows!(Ok(()), "uses a POSIX-only command fixture");
+    skip_if_no_network!(Ok(()));
+    skip_if_sandbox!(Ok(()));
+
+    let server = start_mock_server().await;
+
+    let test = test_codex().build_with_auto_env(&server).await?;
+
+    let start_call_id = "lbg-start";
+    let start_args = json!({
+        "cmd": "sleep 30",
+        "yield_time_ms": 250,
+    });
+    let list_call_id = "lbg-list";
+    let list_args = json!({});
+
+    let mock = mount_sse_sequence(
+        &server,
+        vec![
+            sse(vec![
+                ev_response_created("resp-1"),
+                ev_function_call(
+                    start_call_id,
+                    "exec_command",
+                    &serde_json::to_string(&start_args)?,
+                ),
+                ev_completed("resp-1"),
+            ]),
+            sse(vec![
+                ev_response_created("resp-2"),
+                ev_function_call(
+                    list_call_id,
+                    "list_background_terminals",
+                    &serde_json::to_string(&list_args)?,
+                ),
+                ev_completed("resp-2"),
+            ]),
+            sse(vec![
+                ev_response_created("resp-3"),
+                ev_assistant_message("msg-1", "finished"),
+                ev_completed("resp-3"),
+            ]),
+        ],
+    )
+    .await;
+
+    submit_unified_exec_turn(
+        &test,
+        "start a background command and list it",
+        PermissionProfile::Disabled,
+    )
+    .await?;
+
+    wait_for_event(&test.codex, |event| {
+        matches!(event, EventMsg::TurnComplete(_))
+    })
+    .await;
+
+    let output = mock
+        .function_call_output_text(list_call_id)
+        .expect("missing list_background_terminals function call output");
+    assert!(
+        output.contains("sleep 30"),
+        "expected the running command in list output, got: {output:?}"
+    );
+    let session_regex = Regex::new(r"(?m)^-?[0-9]+: sleep 30$").expect("compile session id regex");
+    assert!(
+        session_regex.is_match(&output),
+        "expected a `<session_id>: sleep 30` tuple, got: {output:?}"
+    );
+
+    // Clean up the background process we started.
+    test.codex.submit(Op::CleanBackgroundTerminals).await?;
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            if test.codex.list_background_terminals().await.is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .context("timed out waiting for background terminal cleanup")?;
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn unified_exec_full_lifecycle_with_background_end_event() -> Result<()> {
     // TODO(anp): Remove after unified-exec fixtures use target-native commands.
     skip_if_target_windows!(Ok(()), "uses a POSIX-only command fixture");

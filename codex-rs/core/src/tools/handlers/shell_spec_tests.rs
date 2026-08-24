@@ -164,6 +164,27 @@ fn write_stdin_tool_matches_expected_spec() {
 }
 
 #[test]
+fn list_background_terminals_tool_matches_expected_spec() {
+    let tool = create_list_background_terminals_tool();
+
+    assert_eq!(
+        tool,
+        ToolSpec::Function(ResponsesApiTool {
+            name: "list_background_terminals".to_string(),
+            description: "List all currently running background terminal sessions started by exec_command, one per line as `<session_id>: <command>`. Pass a returned `<session_id>` to `write_stdin` to poll for output or send input to that session. Returns no lines when no background sessions are running.".to_string(),
+            strict: false,
+            defer_loading: None,
+            parameters: JsonSchema::object(
+                BTreeMap::new(),
+                /*required*/ None,
+                /*additional_properties*/ Some(false.into())
+            ),
+            output_schema: None,
+        })
+    );
+}
+
+#[test]
 fn request_permissions_tool_includes_full_permission_schema() {
     let tool =
         create_request_permissions_tool("Request extra permissions for this turn.".to_string());

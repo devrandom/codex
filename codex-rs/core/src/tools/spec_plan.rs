@@ -16,6 +16,7 @@ use crate::tools::handlers::ExecCommandHandler;
 use crate::tools::handlers::ExecCommandHandlerOptions;
 use crate::tools::handlers::GetContextRemainingHandler;
 use crate::tools::handlers::ListAvailablePluginsToInstallHandler;
+use crate::tools::handlers::ListBackgroundTerminalsHandler;
 use crate::tools::handlers::ListMcpResourceTemplatesHandler;
 use crate::tools::handlers::ListMcpResourcesHandler;
 use crate::tools::handlers::NewContextWindowHandler;
@@ -1022,6 +1023,7 @@ fn add_shell_tools(context: &CoreToolPlanContext<'_>, registry: &mut ToolRegistr
         ),
     }));
     registry.add(WriteStdinHandler);
+    registry.add(ListBackgroundTerminalsHandler);
 }
 
 fn unified_exec_should_include_shell_parameter(
