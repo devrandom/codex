@@ -20,11 +20,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 mod exec_command;
+mod list_background_terminals;
 pub(crate) mod preparation;
 mod write_stdin;
 
 pub use exec_command::ExecCommandHandler;
 pub(crate) use exec_command::ExecCommandHandlerOptions;
+pub use list_background_terminals::ListBackgroundTerminalsHandler;
 pub use write_stdin::WriteStdinHandler;
 
 /// Terminal tools expose the unified-exec process ID as `session_id`.
