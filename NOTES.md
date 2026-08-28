@@ -146,3 +146,79 @@ opencode + same backend works, including array tool args).
 - `codex doctor` — config parse status, resolved model/provider, sandbox
   status, helper paths.
 - AppArmor label of a running process: `cat /proc/<pid>/attr/current`.
+
+## Upstream rust-v0.150.1 — exec & guardian drill-down (2026-08-28)
+
+Local branch sits on `rust-v0.149.1` (+15 local commits). New stable upstream
+release is `rust-v0.150.1` (via `0.150.0`); 208 commits in `0.149.1..0.150.1`
+(Aug 23→26). `0.150.1` itself is a single bug-fix (retained-image compaction
+budgeting). Summary below is the user-centric view; all Guardian + `shell_snapshot_v2`
+features are stage `UnderDevelopment` (not stable).
+
+### exec — user-facing
+
+- Nothing to configure for normal use. Legacy `shell_command` handler/runtime is
+  removed; everything now runs through unified `exec_command`/`write_stdin`.
+  Legacy config/model metadata is migrated automatically. **Legacy opt-outs that
+  used to disable the shell no longer do** — the switch is now `features.shell_tool`.
+- Shell snapshots stay as-is unless opted in. `shell_snapshot` (file-backed) is
+  stable/on by default. New `shell_snapshot_v2` (in-memory, executor-managed,
+  bash/zsh/sh, aliases+functions+exports cached per attachment, bounded) is
+  default OFF — enable only to try it.
+- Remote/exec-server: HTTP MCP servers from a selected executor's `mcp_servers`
+  are auto-discovered into the thread (stdio servers on the executor ignored);
+  remote network policy is enforced on the execution proxy.
+- Feature defaults (from `codex-rs/features/src/lib.rs` at 0.150.1):
+  shell_tool=true, unified_exec=true, shell_snapshot=true,
+  shell_snapshot_v2=false, shell_zsh_fork=false (all under `[features]`).
+
+### exec — non-default config
+
+```toml
+[features]
+shell_snapshot_v2 = true   # default false — in-memory shell snapshots (under dev)
+shell_zsh_fork = true      # default false — zsh bridge (under dev)
+# shell_tool = false       # only if you want to disable the default shell
+```
+
+### guardian — user-facing
+
+- Guardian's surface is the approval flow. `approvals_mode` default = `user`;
+  `auto_review` routes approvals to the prompted reviewer.
+- Escalated (`require_escalated`) commands and retries now ALWAYS run a full
+  synchronous Guardian review — extensions/fast-path can't auto-approve them
+  (commit dbe9dac1ae `#40005`).
+- `auto_review.required_on_models` models always run full review (fast classifier
+  bypassed; cache cleared).
+- Terminal input is now a first-class `writeStdin` review action with TUI
+  status/denial/timeout/retry UI (`#40528`).
+- Interrupting a tool cancels its in-flight Guardian review (`#40021`).
+- Strict MCP auto-review keeps the reviewer's real denial rationale (no generic
+  decline); fallback tells model to ask user explicitly.
+- Multi-agent v2: worker reviews include the bounded root conversation → late,
+  genuine root-user authorization counts; forged/assistant claims don't.
+- Guardian v2 internals: single-token `high`/`low` classification (early return,
+  drain rest for connection reuse), internal sessions with fresh history + parent
+  lineage, `guardian_review` thread source for analytics, review threads isolated
+  from user instructions/extensions/MCP/multi-agent.
+
+### guardian — non-default config
+
+```toml
+[features.guardianv2]
+enabled = true             # default false (under dev)
+
+[features.guardianv2.review_scope]
+computer_use_only = true           # default false — only browser/computer-use tools get fast async scoring
+sandboxed_exec_commands = true     # default false — include sandboxed commands in classifier
+
+[permissions]
+approvals_mode = "auto_review"     # default "user" — route approvals to the prompted reviewer
+
+[permissions.auto_review]
+required_on_models = ["your-model"]  # default empty — these always run full review
+```
+
+Other `[features.guardianv2]` fields (review_threshold=0.5, max_tool_call_lag=3,
+transcript bounds, reuse_parent_compaction, classifier_instructions,
+reasoning_effort) have built-in defaults — only set to tune.
