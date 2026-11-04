@@ -7,7 +7,8 @@ gateway (2026-07-02). Carried on our local branch (do not push upstream).
 
 - Upstream `openai/codex`, built from source. ~95% Rust (`codex-rs/` workspace);
   the `codex` binary comes from the `cli` crate (`codex-cli`).
-- **Local branch:** `v0.150.1-dr`, currently rebased onto `rust-v0.166.0`.
+- **Local branch:** `v0.166.0-dr` (renamed from `v0.150.1-dr`), currently
+  rebased onto `rust-v0.166.0`.
   Carried changes cover custom OpenAI-compatible/MCP support, the
   `deny_dangerous_commands` policy flag, `list_background_terminals`, and local
   build settings. See `git log rust-v0.166.0..HEAD` for the current set.
