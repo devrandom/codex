@@ -7,11 +7,12 @@ gateway (2026-07-02). Carried on our local branch (do not push upstream).
 
 - Upstream `openai/codex`, built from source. ~95% Rust (`codex-rs/` workspace);
   the `codex` binary comes from the `cli` crate (`codex-cli`).
-- **Local divergence:** commit `c574659d58` "core: fall back to flattened name
-  when resolving MCP tool calls" (see below). Rebase/reapply after pulls; a
-  diff copy lives at `~/proj/ycluster/tmp/codex-flat-toolname-fallback.patch`.
-- Uncommitted WIP: `codex-rs/model-provider-info/src/lib.rs` (disabling the
-  built-in openai provider — session exploration, not settled).
+- **Local branch:** `v0.150.1-dr`, currently rebased onto `rust-v0.166.0`.
+  Carried changes cover custom OpenAI-compatible/MCP support, the
+  `deny_dangerous_commands` policy flag, `list_background_terminals`, and local
+  build settings. See `git log rust-v0.166.0..HEAD` for the current set.
+- The upstream tree no longer contains `.codex/skills`; the historical notes
+  below may refer to paths from earlier release lines.
 
 ## Building
 
@@ -149,11 +150,12 @@ opencode + same backend works, including array tool args).
 
 ## Upstream rust-v0.150.1 — exec & guardian drill-down (2026-08-28)
 
-Local branch sits on `rust-v0.149.1` (+15 local commits). New stable upstream
-release is `rust-v0.150.1` (via `0.150.0`); 208 commits in `0.149.1..0.150.1`
-(Aug 23→26). `0.150.1` itself is a single bug-fix (retained-image compaction
-budgeting). Summary below is the user-centric view; all Guardian + `shell_snapshot_v2`
-features are stage `UnderDevelopment` (not stable).
+This section is a historical snapshot for `rust-v0.150.1` (August 2026), when the
+local branch was based on `rust-v0.149.1` (+15 local commits). The release added
+208 commits in `0.149.1..0.150.1` (Aug 23→26); `0.150.1` itself was a single
+bug-fix (retained-image compaction budgeting). At that time all Guardian and
+`shell_snapshot_v2` features were stage `UnderDevelopment` (not stable).
+The zsh-fork paths below were removed from the standard executor by 0.163.
 
 ### exec — user-facing
 
